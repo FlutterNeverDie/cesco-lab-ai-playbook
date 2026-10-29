@@ -1,0 +1,20 @@
+{
+  "name": "cesco-lab-ai-playbook",
+  "version": "1.0.0",
+  "description": "세스코 이물·식품안전 연구원을 위한 실전 AI 그림책 및 업무 에이전트 플레이북",
+  "scripts": {
+    "test": "node scripts/harness.js",
+    "build": "node scripts/build.js",
+    "precommit": "node scripts/harness.js"
+  },
+  "keywords": [
+    "cesco",
+    "ai",
+    "playbook",
+    "laboratory",
+    "agent",
+    "mcp"
+  ],
+  "author": "Sanghoon Lee",
+  "license": "MIT"
+}

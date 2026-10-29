@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>/*TITLE*/</title>
+<style>
+  :root {
+    --desk: #e9e6df; --paper: #fdfcf9; --ink: #23272f; --body: #3a3f4a; --muted: #6b7280; --line: #e4e1d8;
+    --stage: #f6f4ee; --gold: #9a6a00; --gold-soft: #fff6d9; --gold-line: #f0d58a;
+    --ok: #1f8a5b; --ok-soft: #e3f5ec; --bad: #c2410c; --bad-soft: #fdeee6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--desk); color: var(--ink);
+    font-family: -apple-system, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif; }
+  button { font: inherit; color: inherit; }
+
+  .shell { height: 100vh; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 10px 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+  /* 책장 = 가로 목차 카드 (2026-10-29: 세로 책등은 글씨가 세로로 길게 늘어서고 흐려서 안 읽힌다는 의견) */
+  .shelf { grid-row: 1 / 3; width: 210px; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; overflow-y: auto; }
+  .shelf .shelf-title { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .06em; padding: 0 4px 2px; }
+  .spine { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 10px; align-items: center;
+    padding: 10px 12px 10px 10px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line);
+    box-shadow: 0 2px 6px rgba(60,50,30,.06); transition: transform .15s, box-shadow .15s, background .15s; }
+  .spine:hover, .spine:focus-visible { transform: translateX(2px); box-shadow: 0 4px 12px rgba(60,50,30,.12); }
+  .spine:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+  .spine .no { grid-row: 1 / 3; width: 34px; height: 34px; border-radius: 50%; background: var(--c); color: #fff;
+    display: grid; place-items: center; font-size: 15px; font-weight: 800; }
+  .spine .tt { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .spine .prog { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .spine .bar { flex: 1; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .spine .bar i { display: block; height: 100%; background: var(--c); border-radius: 4px; }
+  .spine.cur { background: var(--cs); border-color: var(--c); box-shadow: inset 4px 0 0 var(--c), 0 4px 12px rgba(60,50,30,.10); }
+  .spine.cur .tt { color: var(--ci); }
+  .book { display: grid; perspective: 2200px; min-height: 0; }
+  .page {
+    grid-area: 1 / 1; min-height: 0; background: var(--paper); border-radius: 6px 14px 14px 6px;
+    box-shadow: 0 1px 0 #d8d4c9, 0 18px 40px rgba(60,50,30,.16), inset 18px 0 24px -18px rgba(60,50,30,.18);
+    transform-origin: left center; overflow: hidden;
+    display: grid; grid-template-rows: auto minmax(0, 1fr) auto; padding: 22px 28px 14px 36px;
+  }
+  .page.turn-out { animation: turnOut .65s ease-in forwards; z-index: 3; }
+  .page.turn-in  { animation: turnIn .65s ease-out forwards; z-index: 3; }
+  @keyframes turnOut { to { transform: rotateY(-115deg); box-shadow: -30px 10px 40px rgba(0,0,0,.18); opacity: .2; } }
+  @keyframes turnIn  { from { transform: rotateY(-115deg); opacity: .2; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .page.turn-out, .page.turn-in { animation-duration: .01s; } }
+
+  .runhead { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); letter-spacing: .04em; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .folio { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8px; }
+
+  .spread { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 28px; padding: 16px 0 10px; min-height: 0; }
+  .stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--stage); min-height: 0; }
+  .stage .scene { position: absolute; inset: 0; display: grid; place-items: center; }
+  .stage .scene > svg { width: 100%; height: 100%; display: block; }
+  .stage .scene > canvas { width: 100% !important; height: 100% !important; display: block; cursor: grab; touch-action: none; }
+  .stage .tag { position: absolute; left: 10px; bottom: 10px; z-index: 2; font-size: 11.5px; color: var(--muted); background: rgba(255,255,255,.9); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); pointer-events: none; max-width: calc(100% - 120px); }
+  .stage .replay { position: absolute; right: 10px; bottom: 10px; z-index: 2; font-size: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 99px; padding: 5px 12px; cursor: pointer; }
+  .stage .replay:hover { border-color: var(--accent); color: var(--accent); }
+
+  .text { overflow-y: auto; padding-right: 8px; min-height: 0; word-break: keep-all; overflow-wrap: anywhere; }
+  .text h3 { display: flex; align-items: center; gap: 8px; margin: 26px 0 10px; font-size: 16px; font-weight: 800; color: var(--ink); }
+  .text h3::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--accent); }
+  .steps { list-style: none; counter-reset: st; margin: 0 0 8px; padding: 0 !important; display: grid; gap: 8px; }
+  .steps li { counter-increment: st; position: relative; margin: 0 !important; padding: 10px 14px 10px 46px; background: var(--stage); border-radius: 12px; line-height: 1.65 !important; }
+  .steps li::before { content: counter(st); position: absolute; left: 12px; top: 10px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+  .steps li small { display: block; color: var(--muted); font-size: 13px; }
+  .cards { display: grid; gap: 8px; margin: 0 0 8px; }
+  .card { border-left: 4px solid var(--accent); background: var(--stage); border-radius: 0 12px 12px 0; padding: 10px 14px; font-size: 15px; line-height: 1.65; color: var(--body); }
+  .card b { display: block; font-size: 15.5px; margin-bottom: 1px; }
+  .card q { display: block; margin-top: 4px; color: var(--accent-ink); font-weight: 600; quotes: "“" "”"; }
+  .chap { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .08em; }
+  .text h2 { margin: 4px 0 12px; font-size: 27px; line-height: 1.3; letter-spacing: -.01em; }
+  .lead { font-size: 16.5px; font-weight: 600; background: var(--accent-soft); color: var(--accent-ink); padding: 14px 18px; border-radius: 12px; margin: 0 0 6px; line-height: 1.65; }
+  .text p { font-size: 16px; line-height: 1.8; margin: 0 0 10px; color: var(--body); }
+  .text ul { margin: 0 0 12px; padding-left: 1.2em; font-size: 15.5px; line-height: 1.8; color: var(--body); }
+  .text li { margin: 3px 0; }
+  .text b { color: var(--ink); }
+  .say { background: var(--stage); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin: 0 0 12px; font-size: 14.5px; line-height: 1.7; color: var(--body); }
+  .say small { display: block; font-size: 11.5px; color: var(--muted); letter-spacing: .04em; margin-bottom: 2px; }
+  .fig { margin: 4px 0 12px; background: var(--stage); border-radius: 12px; padding: 10px; }
+  .fig svg { display: block; width: 100%; height: auto; font-family: inherit; }
+  .lab { margin: 26px 0 0; background: var(--gold-soft); border: 1px solid var(--gold-line); border-radius: 12px; padding: 12px 16px; font-size: 15px; line-height: 1.75; }
+  .lab .lbl { display: block; font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: .06em; margin-bottom: 2px; }
+  .quiz { margin: 16px 0 6px; border: 1px dashed var(--line); border-radius: 12px; padding: 12px 16px; }
+  .quiz > b { font-size: 12px; color: var(--accent); letter-spacing: .06em; }
+  .quiz > p { margin: 4px 0 10px; font-weight: 600; color: var(--ink); }
+  .opts { display: grid; gap: 6px; }
+  .opts button { text-align: left; border: 1px solid var(--line); background: var(--paper); border-radius: 10px; padding: 9px 12px; cursor: pointer; font-size: 14.5px; line-height: 1.5; }
+  .opts button:hover:not(:disabled) { border-color: var(--accent); }
+  .opts button.right { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); font-weight: 600; }
+  .opts button.wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+  .opts button:disabled { cursor: default; }
+  .ans { margin: 10px 0 0 !important; font-size: 14.5px !important; }
+
+  /* 표지 · 정리 */
+  .cover { display: grid; align-content: center; gap: 10px; }
+  .cover .kicker { font-size: 13px; letter-spacing: .2em; color: var(--muted); }
+  .cover .vol { display: inline-block; width: fit-content; font-size: 13px; font-weight: 700; color: #fff; background: var(--accent); padding: 4px 12px; border-radius: 99px; }
+  .cover h1 { margin: 4px 0 0; font-size: 40px; line-height: 1.2; letter-spacing: -.02em; }
+  .cover .sub { font-size: 16px; color: var(--muted); line-height: 1.6; }
+  .toc { margin: 14px 0 0; display: grid; gap: 4px; }
+  .toc button { all: unset; cursor: pointer; display: flex; gap: 12px; align-items: baseline; padding: 8px 10px; border-radius: 10px; font-size: 16px; }
+  .toc button:hover, .toc button:focus-visible { background: var(--accent-soft); }
+  .toc .n { color: var(--accent); font-weight: 700; width: 18px; }
+  .recap h2 { font-size: 27px; margin: 4px 0 14px; }
+  .recap ol { padding-left: 1.3em; margin: 0 0 18px; font-size: 15.5px; line-height: 1.8; color: var(--body); }
+  .recap li { margin: 6px 0; }
+  .next { background: var(--accent-soft); color: var(--accent-ink); border-radius: 12px; padding: 14px 16px; font-size: 15px; line-height: 1.7; }
+  .next .lbl { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; margin-bottom: 2px; }
+  .open-next { margin-top: 14px; }
+  .gloss { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 0 0 16px; }
+  .gloss td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.6; color: var(--body); }
+  .gloss td:first-child { font-weight: 700; color: var(--ink); white-space: nowrap; padding-right: 14px; }
+
+  .nav { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .btn { appearance: none; border: 1px solid #cfcabe; background: var(--paper); color: var(--ink); border-radius: 10px; height: 40px; padding: 0 18px; font-size: 14.5px; cursor: pointer; }
+  .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .dots { display: flex; gap: 6px; }
+  .dots button { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 0; background: #cfcabe; cursor: pointer; }
+  .dots button.cur { background: var(--accent); width: 22px; border-radius: 6px; }
+  .count { font-size: 13px; color: var(--muted); min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 900px) {
+    .shell { height: auto; min-height: 100vh; padding: 10px 10px 16px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; align-content: start; }
+    .shelf { grid-row: auto; width: auto; flex-direction: row; overflow-x: auto; padding: 0 0 4px; scroll-snap-type: x proximity; }
+    .shelf .shelf-title { display: none; }
+    .spine { flex: 0 0 auto; grid-template-columns: 26px auto; padding: 6px 14px 6px 6px; border-radius: 99px; box-shadow: none; scroll-snap-align: start; }
+    .spine:hover, .spine:focus-visible { transform: none; }
+    .spine .no { grid-row: auto; width: 26px; height: 26px; font-size: 13px; }
+    .spine .tt { font-size: 13px; -webkit-line-clamp: 1; max-width: 9.5em; white-space: nowrap; text-overflow: ellipsis; display: block; }
+    .spine .prog { display: none; }
+    .spine.cur { box-shadow: none; }
+    .page { padding: 14px 16px 10px 20px; grid-template-rows: auto auto auto; align-content: start; }
+    .spread { grid-template-columns: minmax(0, 1fr); grid-template-rows: 300px auto; gap: 18px; }
+    .stage { min-height: 300px; }
+    .text { overflow: visible; padding-right: 0; }
+    .text h2, .recap h2 { font-size: 23px; }
+    .cover h1 { font-size: 30px; }
+    .nav { position: sticky; bottom: 0; background: var(--desk); padding: 8px 0; }
+    .count { display: none; }
+    .dots { display: none; }
+    .nav { flex-wrap: nowrap; gap: 8px; }
+    .nav .btn { padding: 0 14px; }
+    .runhead span:last-child { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="shelf" id="shelf" aria-label="권 고르기"></nav>
+  <div class="book" id="book" aria-live="polite"></div>
+  <div class="nav">
+    <button class="btn" id="home">⌂ 표지</button>
+    <button class="btn" id="prev">← 이전</button>
+    <div class="dots" id="dots"></div>
+    <span class="count" id="count"></span>
+    <button class="btn" id="next">다음 →</button>
+  </div>
+</div>
+<script>/*THREE*/</script>
+<script>
+// ---------- 장면 도구 ----------
+const NS = "http://www.w3.org/2000/svg";
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ease = x => { x = clamp(x); return x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };
+// 구간 [a, b] 안에서 0→1
+const seg = (t, a, b) => ease((t - a) / (b - a));
+
+function makeApi(el) {
+  const offs = [];
+  const api = {
+    el, reduced: REDUCED,
+    accent: getComputedStyle(document.documentElement).getPropertyValue("--accent").trim(),
+    svg(w = 400, h = 300) {
+      const s = document.createElementNS(NS, "svg");
+      s.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      s.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      s.style.fontFamily = "inherit";
+      el.appendChild(s); return s;
+    },
+    n(tag, attrs = {}, parent) {
+      const e = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      if (parent) parent.appendChild(e);
+      return e;
+    },
+    t(text, attrs = {}, parent) { const e = api.n("text", attrs, parent); e.textContent = text; return e; },
+    set(e, attrs) { for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); },
+    // fn(초)를 매 프레임 호출. 움직임 줄이기면 still 시점 한 장면만 그린다.
+    loop(fn, still = 0) {
+      if (REDUCED) { fn(still); return; }
+      let id, t0 = performance.now();
+      const step = now => { fn((now - t0) / 1000); id = requestAnimationFrame(step); };
+      id = requestAnimationFrame(step);
+      offs.push(() => cancelAnimationFrame(id));
+    },
+    on(target, ev, fn, opt) { target.addEventListener(ev, fn, opt); offs.push(() => target.removeEventListener(ev, fn, opt)); },
+    cleanup(fn) { offs.push(fn); },
+    dispose() { offs.splice(0).forEach(f => { try { f(); } catch (e) {} }); el.innerHTML = ""; },
+  };
+  return api;
+}
+
+// three.js 장면 공통: 렌더러·카메라·드래그 회전·크기 맞춤
+function makeThree(api, { distance = 9, tilt = 0.35 } = {}) {
+  if (!window.THREE) { api.el.textContent = "3D를 불러오지 못했어요."; return null; }
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  api.el.appendChild(renderer.domElement);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(4, 6, 5); scene.add(dl);
+  const world = new THREE.Group(); scene.add(world);
+  const view = { yaw: -0.5, pitch: tilt, auto: true, dist: distance };
+  const fit = () => {
+    const w = api.el.clientWidth || 400, h = api.el.clientHeight || 300;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    view.dist = distance / Math.min(1, camera.aspect * 1.15);
+  };
+  fit();
+  const ro = new ResizeObserver(fit); ro.observe(api.el); api.cleanup(() => ro.disconnect());
+  let drag = null;
+  api.on(renderer.domElement, "pointerdown", e => { drag = { x: e.clientX, y: e.clientY, yaw: view.yaw, pitch: view.pitch }; view.auto = false; renderer.domElement.setPointerCapture(e.pointerId); });
+  api.on(renderer.domElement, "pointermove", e => {
+    if (!drag) return;
+    view.yaw = drag.yaw + (e.clientX - drag.x) * 0.01;
+    view.pitch = clamp(drag.pitch + (e.clientY - drag.y) * 0.01, -1.2, 1.2);
+  });
+  api.on(renderer.domElement, "pointerup", () => { drag = null; });
+  api.cleanup(() => { renderer.dispose(); });
+  const draw = dt => {
+    if (view.auto && !REDUCED) view.yaw += dt * 0.15;
+    const d = view.dist;
+    camera.position.set(Math.sin(view.yaw) * Math.cos(view.pitch) * d, Math.sin(view.pitch) * d, Math.cos(view.yaw) * Math.cos(view.pitch) * d);
+    camera.lookAt(0, 0, 0);
+    renderer.render(scene, camera);
+  };
+  // 글자 라벨을 3D 공간에 붙이기 (캔버스 텍스처 스프라이트)
+  const label = (text, { color = "#23272f", size = 0.5, bg = null } = {}) => {
+    const c = document.createElement("canvas"), x = c.getContext("2d");
+    const font = "600 48px -apple-system, 'Apple SD Gothic Neo', sans-serif";
+    x.font = font; const w = Math.ceil(x.measureText(text).width) + 32;
+    c.width = w; c.height = 72; x.font = font;
+    if (bg) { x.fillStyle = bg; x.beginPath(); x.roundRect ? x.roundRect(0, 0, w, 72, 18) : x.rect(0, 0, w, 72); x.fill(); }
+    x.fillStyle = color; x.textBaseline = "middle"; x.fillText(text, 16, 38);
+    const tex = new THREE.CanvasTexture(c);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    s.scale.set(size * w / 72, size, 1);
+    return s;
+  };
+  return { THREE, renderer, scene, camera, world, draw, label, view };
+}
+
+// ---------- 책 ----------
+const BOOKS = [];
+/*VOLUMES*/
+
+const book = document.getElementById("book");
+const KEY = "ai-picture-books";
+let VOL, PAGES, curV = 0, cur = 0, finishTurn = null;
+
+// 지금 펼친 권을 바꾼다 (색, 쪽 목록, 점, 책장 표시)
+function useVolume(vi) {
+  curV = vi; VOL = BOOKS[vi];
+  PAGES = [{ type: "cover" }, ...VOL.chapters.map((c, i) => ({ type: "chap", i })), { type: "recap" }];
+  const root = document.documentElement.style;
+  root.setProperty("--accent", VOL.color.accent);
+  root.setProperty("--accent-ink", VOL.color.ink);
+  root.setProperty("--accent-soft", VOL.color.soft);
+  const dots = document.getElementById("dots");
+  dots.innerHTML = "";
+  PAGES.forEach((_, i) => { const d = document.createElement("button"); d.setAttribute("aria-label", `${i + 1}쪽으로`); d.onclick = () => go(i); dots.appendChild(d); });
+  document.querySelectorAll(".spine").forEach((b, i) => { b.classList.toggle("cur", i === vi); b.setAttribute("aria-current", i === vi ? "true" : "false"); });
+  const cv = document.querySelectorAll(".spine")[vi]; if (cv && innerWidth <= 900) cv.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+// 권 이름: 보통 "N권", 특강처럼 따로 정한 이름이 있으면 그것
+const volName = b => b.volName || `${b.no}권`;
+
+function renderShelf() {
+  const shelf = document.getElementById("shelf");
+  shelf.innerHTML = `<div class="shelf-title">책장 · ${BOOKS.length}권</div>` + BOOKS.map((b, i) =>
+    `<button class="spine" style="--c:${b.color.accent};--ci:${b.color.ink};--cs:${b.color.soft}" data-v="${i}" aria-label="${volName(b)} ${b.title}"><span class="no">${b.badge || b.no}</span><span class="tt">${b.title}</span><span class="prog"><span class="bar"><i></i></span><span class="pn"></span></span></button>`).join("");
+  shelf.querySelectorAll(".spine").forEach(b => b.onclick = () => go(0, +b.dataset.v));
+  showProgress();
+}
+// 권마다 어디까지 읽었는지 (가장 멀리 간 쪽) - 책장 카드의 진행 막대
+const PKEY = KEY + "-progress";
+let PROG = {};
+try { PROG = JSON.parse(localStorage.getItem(PKEY) || "{}"); } catch (e) {}
+function showProgress() {
+  document.querySelectorAll(".spine").forEach((el, i) => {
+    const b = BOOKS[i], total = b.chapters.length + 2, seen = Math.min(total, (PROG[b.no] || 0));
+    el.querySelector(".bar i").style.width = `${Math.round(seen / total * 100)}%`;
+    el.querySelector(".pn").textContent = seen >= total ? "다 읽음" : seen ? `${seen}/${total}쪽` : "아직 안 읽음";
+  });
+}
+function markRead() {
+  const n = VOL.no, reached = cur + 1;
+  if ((PROG[n] || 0) < reached) { PROG[n] = reached; try { localStorage.setItem(PKEY, JSON.stringify(PROG)); } catch (e) {} showProgress(); }
+}
+
+function pageHTML(p, idx) {
+  const head = left => `<div class="runhead"><span>${left}</span><span>${volName(VOL)} · ${VOL.title}</span></div>`;
+  const foot = `<div class="folio"><span>${VOL.series}</span><span>${idx + 1} / ${PAGES.length}</span></div>`;
+  const stage = tag => `<div class="stage"><div class="scene"></div>${tag ? `<span class="tag">${tag}</span>` : ""}<button class="replay" type="button">↻ 다시 보기</button></div>`;
+  if (p.type === "cover") return head(VOL.series) + `
+    <div class="spread">${stage(VOL.coverTag)}
+      <div class="text cover">
+        <div class="kicker">${VOL.kicker}</div>
+        <span class="vol">${volName(VOL)}</span>
+        <h1>${VOL.title}</h1>
+        <div class="sub">${VOL.subtitle}</div>
+        <div class="toc">${VOL.chapters.map((c, i) => `<button data-go="${i + 1}"><span class="n">${i + 1}</span>${c.title}</button>`).join("")}</div>
+      </div>
+    </div>` + foot;
+  if (p.type === "recap") return head("이번 권 정리") + `
+    <div class="spread">${stage(VOL.recapTag)}
+      <div class="text recap">
+        <div class="chap">RECAP</div>
+        <h2>${VOL.recap.title}</h2>
+        <ol>${VOL.recap.points.map(x => `<li>${x}</li>`).join("")}</ol>
+        ${VOL.recap.extra || ""}
+        <div class="next"><span class="lbl">${VOL.recap.nextLabel}</span>${VOL.recap.next}</div>
+        ${BOOKS[curV + 1] ? `<button class="btn open-next" data-vol="${curV + 1}">${volName(BOOKS[curV + 1])} 펼치기 →</button>` : ""}
+      </div>
+    </div>` + foot;
+  const c = VOL.chapters[p.i], n = p.i + 1;
+  return head(`${n}장 · ${c.title}`) + `
+    <div class="spread">${stage(c.tag)}
+      <div class="text">
+        <div class="chap">CHAPTER ${String(n).padStart(2, "0")}</div>
+        <h2>${c.title}</h2>
+        <p class="lead">${c.lead}</p>
+        ${c.body}
+        <div class="lab"><span class="lbl">실험실로 바꾸면</span>${c.lab}</div>
+        <div class="quiz"><b>확인 퀴즈</b><p>${c.quiz.q}</p>
+          <div class="opts">${c.quiz.options.map((o, k) => `<button type="button" data-k="${k}">${o}</button>`).join("")}</div>
+          <p class="ans" hidden></p>
+        </div>
+      </div>
+    </div>` + foot;
+}
+
+function sceneFor(p) {
+  if (p.type === "cover") return VOL.coverScene;
+  if (p.type === "recap") return VOL.recapScene;
+  return VOL.chapters[p.i].scene;
+}
+
+function makePage(idx) {
+  const el = document.createElement("section");
+  el.className = "page"; el.innerHTML = pageHTML(PAGES[idx], idx);
+  el.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(+b.dataset.go));
+  el.querySelectorAll("[data-vol]").forEach(b => b.onclick = () => go(0, +b.dataset.vol));
+  const p = PAGES[idx];
+  if (p.type === "chap") {
+    const q = VOL.chapters[p.i].quiz, ans = el.querySelector(".ans");
+    el.querySelectorAll(".opts button").forEach(b => b.onclick = () => {
+      const k = +b.dataset.k;
+      el.querySelectorAll(".opts button").forEach(x => { x.disabled = true; if (+x.dataset.k === q.answer) x.classList.add("right"); });
+      if (k !== q.answer) b.classList.add("wrong");
+      ans.innerHTML = (k === q.answer ? "<b>맞았어요!</b> " : "<b>아쉬워요.</b> ") + q.explain;
+      ans.hidden = false;
+    });
+  }
+  return el;
+}
+
+function startScene(el, idx) {
+  const box = el.querySelector(".scene"), fn = sceneFor(PAGES[idx]);
+  if (!box || !fn) return;
+  const run = () => {
+    if (el._api) el._api.dispose();
+    el._api = makeApi(box);
+    try { fn(el._api); } catch (e) { console.error(e); box.textContent = "그림을 그리지 못했어요."; }
+  };
+  run();
+  el.querySelector(".replay").onclick = run;
+}
+function stopScene(el) { if (el._api) { el._api.dispose(); el._api = null; } }
+
+function go(to, vi = curV) {
+  if (finishTurn) finishTurn();  // 넘기는 중에 또 누르면 앞 넘김을 바로 끝낸다
+  const sameVol = vi === curV;
+  if (sameVol) { to = Math.max(0, Math.min(PAGES.length - 1, to)); if (to === cur) return; }
+  const forward = sameVol ? to > cur : vi > curV;
+  const old = book.querySelector(".page");
+  if (!sameVol) useVolume(vi);
+  const next = makePage(to);
+  stopScene(old);
+  const done = () => {
+    old.remove(); next.classList.remove("turn-in");
+    if (finishTurn === done) finishTurn = null;
+  };
+  finishTurn = done;
+  if (forward) {
+    book.insertBefore(next, old); startScene(next, to);
+    old.classList.add("turn-out");
+    old.addEventListener("animationend", done, { once: true });
+  } else {
+    book.appendChild(next); next.classList.add("turn-in"); startScene(next, to);
+    next.addEventListener("animationend", done, { once: true });
+  }
+  cur = to; sync();
+  if (innerWidth <= 900) window.scrollTo({ top: 0, behavior: REDUCED ? "auto" : "smooth" });
+  history.replaceState(null, "", `#${VOL.no}-${cur + 1}`);
+  try { localStorage.setItem(KEY, JSON.stringify({ v: curV, p: cur })); } catch (e) {}
+  markRead();
+}
+function sync() {
+  document.getElementById("count").textContent = `${cur + 1} / ${PAGES.length}`;
+  document.getElementById("prev").disabled = cur === 0;
+  document.getElementById("home").disabled = cur === 0;
+  document.getElementById("next").disabled = cur === PAGES.length - 1;
+  [...document.getElementById("dots").children].forEach((d, i) => d.classList.toggle("cur", i === cur));
+}
+
+document.getElementById("home").onclick = () => go(0);
+document.getElementById("prev").onclick = () => go(cur - 1);
+document.getElementById("next").onclick = () => go(cur + 1);
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight" || e.key === "PageDown") go(cur + 1); if (e.key === "ArrowLeft" || e.key === "PageUp") go(cur - 1); });
+let sx = null;
+book.addEventListener("touchstart", e => { sx = e.target.closest("canvas") ? null : e.touches[0].clientX; }, { passive: true });
+book.addEventListener("touchend", e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 70) go(cur + (dx < 0 ? 1 : -1)); sx = null; });
+
+// 시작 위치: 주소(#권-쪽) > 마지막으로 본 곳 > 1권 표지
+let startV = 0, startP = 0;
+try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); if (BOOKS[s.v]) { startV = s.v; startP = s.p || 0; } } catch (e) {}
+const hm = location.hash.match(/^#(\d+)-(\d+)$/);
+if (hm) { const vi = BOOKS.findIndex(b => b.no === +hm[1]); if (vi >= 0) { startV = vi; startP = +hm[2] - 1; } }
+renderShelf(); useVolume(startV);
+cur = Math.max(0, Math.min(PAGES.length - 1, startP));
+const first = makePage(cur); book.appendChild(first); startScene(first, cur); sync(); markRead();
+</script>
+</body>
+</html>
