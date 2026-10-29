@@ -27,6 +27,7 @@ const coreFiles = [
   path.join(SRC, 'core', 'styles.css'),
   path.join(SRC, 'core', 'api.js'),
   path.join(SRC, 'core', 'components.js'),
+  path.join(SRC, 'core', 'book_cover.js'),
   path.join(SRC, 'core', 'runtime.js'),
   path.join(ROOT, 'build', 'vendor', 'three.min.js')
 ];

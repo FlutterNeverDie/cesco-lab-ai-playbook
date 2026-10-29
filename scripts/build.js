@@ -24,13 +24,15 @@ try {
 
 console.log('2. 1장 1파일 소스 조립 및 HTML 번들링 시작...');
 
-const TITLE = "세스코 연구원을 위한 AI 그림책";
+const TITLE = "신서아를 위한 AI 에이전트 업무 사용 입문편";
 const VISIBLE = [1, 2, 3, 4, 5, 6, 7]; // 표시할 권 목록
 
 // 공통 자원 로드
 const css = fs.readFileSync(path.join(ROOT, 'src', 'core', 'styles.css'), 'utf8');
 const apiJs = fs.readFileSync(path.join(ROOT, 'src', 'core', 'api.js'), 'utf8');
 const componentsJs = fs.readFileSync(path.join(ROOT, 'src', 'core', 'components.js'), 'utf8')
+  .replace(/export\s+const\s+/g, 'const ');
+const bookCoverJs = fs.readFileSync(path.join(ROOT, 'src', 'core', 'book_cover.js'), 'utf8')
   .replace(/export\s+const\s+/g, 'const ');
 const runtimeJs = fs.readFileSync(path.join(ROOT, 'src', 'core', 'runtime.js'), 'utf8');
 const threeJs = fs.readFileSync(path.join(ROOT, 'build', 'vendor', 'three.min.js'), 'utf8')
@@ -82,6 +84,7 @@ ${css}
 <script>
 ${apiJs}
 ${componentsJs}
+${bookCoverJs}
 ${volumesCode}
 ${runtimeJs}
 </script>
