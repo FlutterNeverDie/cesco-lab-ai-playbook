@@ -9,7 +9,7 @@ HERE = Path(__file__).resolve().parent
 OUT = HERE.parent / "연구원을_위한_AI_그림책.html"
 TITLE = "연구원을 위한 AI 그림책"
 
-VISIBLE = [1, 2, 3, 4, 5, 6, 7]  # 1~5권 + 6권(이상훈 특강) + 7권(실전: 세스코 업무에 녹이기)
+VISIBLE = [1, 2, 3, 4, 5, 6, 7]  # 1~5권 + 6권(특강: AI 에이전트 사용에 중요한 3가지) + 7권(실전: 세스코 업무에 녹이기)
 
 
 def main():

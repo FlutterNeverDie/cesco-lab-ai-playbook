@@ -33,7 +33,7 @@ BOOKS.push({
   volName: "특강",
   series: "연구원을 위한 AI 그림책",
   kicker: "SPECIAL LECTURE",
-  title: "이상훈 특강: AI를 우리 팀 사람으로",
+  title: "AI 에이전트 사용에 중요한 3가지",
   subtitle: "요즘은 AI를 다시 가르치지 않아도 돼요.<br>지침, 스킬, 검증. 글로 쓴 세 가지 규칙이면 우리 팀 방식대로 일해요.",
   color: { accent: "#b23a6b", ink: "#7d1f47", soft: "#fbe8f0" },
   coverTag: "시작할 때, 하는 중에, 돌려주기 전에",
